@@ -54,11 +54,12 @@ public class InventoryPlanModule{
 			ArrayList<OrderReq> orderReqs = new ArrayList<OrderReq>();
 			double amount = inventories.get(material).getOrder();
 			if(amount<0.0){
-				System.out.println("amount" +amount);
+				//System.out.println("amount" +amount);
 			}
 			
 			if(!returnsAllowed){
 				amount = Math.max(0.0, amount);
+				//System.out.println("nor returns allowed");
 			}			
 			
 			if(amount<0.0){				
@@ -72,7 +73,7 @@ public class InventoryPlanModule{
 			if(amount!=0.0){
 				OrderReq newOrderReq = new OrderReq(material, currentTick, amount);
 				if(newOrderReq.getSize()<0.0){
-					System.out.println("newOrderReq:" + newOrderReq.getSize());
+					//System.out.println("newOrderReq:" + newOrderReq.getSize());
 				}
 				orderReqs.add(newOrderReq);
 			}

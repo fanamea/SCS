@@ -1,6 +1,7 @@
 package artefacts;
 
 import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Set;
@@ -14,15 +15,15 @@ import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 
 import repast.simphony.essentials.RepastEssentials;
 
-public class DemandData implements Iterable<Integer>{
+public class LeadTimeData implements Iterable<Integer>{
 	
-	private TreeMap<Integer, Double> dataMap;
+	private TreeMap<Integer, DescriptiveStatistics> dataMap;
 	private DataSet demandDataSet;
 	private DescriptiveStatistics demandStats;
 	
-	public DemandData(){
+	public LeadTimeData(){
 		
-		this.dataMap = new TreeMap<Integer, Double>();
+		this.dataMap = new TreeMap<Integer, DescriptiveStatistics>();
 		this.demandDataSet = new DataSet();
 		this.demandStats = new DescriptiveStatistics();
 		
@@ -60,17 +61,6 @@ public class DemandData implements Iterable<Integer>{
 		return mean;
 	}
 	
-	public double getSquareMean(int period){
-		int tick = (int)RepastEssentials.GetTickCount();
-		DescriptiveStatistics substats = getSquaredSubStats(tick-period+1, tick);
-		double mean = substats.getMean();
-		if(substats.getN()==0){
-			mean = demandStats.getMean();
-		}		
-		//System.out.println("Mean: " + mean + ", Werte: " + substats.getN() + ", period: " + + period);
-		return mean;
-	}
-	
 	public double getVariance(){
 		return demandStats.getVariance();
 	}
@@ -89,31 +79,33 @@ public class DemandData implements Iterable<Integer>{
 		return getSubStats(start, end).getVariance();
 	}
 	
-	public void handDemandData(int tick, double demand){
+	public void handData(int tick, double demand){
 		//System.out.println("handDemandData: " + tick + ", demand: " + demand);
 		DataPoint dp = new Observation(demand);
 		dp.setIndependentValue("Tick", tick);
-		this.dataMap.put(tick, demand);
+		if(!this.dataMap.containsKey(tick)){
+			this.dataMap.put(tick, new DescriptiveStatistics());
+		}
+		this.dataMap.get(tick).addValue(demand);
 		this.demandDataSet.add(dp);
 		this.demandStats.addValue(demand);
 	}
 	
-	public void handDemandData(double demand){
+	public void handData(double demand){
 		int tick = (int)RepastEssentials.GetTickCount();
 		////System.out.println("handDemandData: " + tick + ", demand: " + demand);
 		DataPoint dp = new Observation(demand);
 		dp.setIndependentValue("Tick", tick);
-		this.dataMap.put(tick, demand);
+		if(!this.dataMap.containsKey(tick)){
+			this.dataMap.put(tick, new DescriptiveStatistics());
+		}
+		this.dataMap.get(tick).addValue(demand);
 		this.demandDataSet.add(dp);
 		this.demandStats.addValue(demand);
 	}
 	
 	
-	public double getDemandData(int tick){
-		return this.dataMap.get(tick);
-	}
-	
-	public TreeMap<Integer, Double> getDataMap(){
+	public TreeMap<Integer, DescriptiveStatistics> getDataMap(){
 		return this.dataMap;
 	}
 	
@@ -126,7 +118,7 @@ public class DemandData implements Iterable<Integer>{
 		int currentTick = (int)RepastEssentials.GetTickCount();
 		
 		for(int i = currentTick - period; i<currentTick; i++){
-			DataPoint dp = new Observation(this.dataMap.get(i));
+			DataPoint dp = new Observation(this.dataMap.get(i).getSum());
 			dp.setIndependentValue("Tick", i);
 			ds.add(dp);
 		}
@@ -144,18 +136,11 @@ public class DemandData implements Iterable<Integer>{
 	
 	public DescriptiveStatistics getSubStats(int start, int end){
 		DescriptiveStatistics temp = new DescriptiveStatistics();
-		TreeMap<Integer, Double> subMap = new TreeMap<Integer, Double>(dataMap.subMap(start, true, end, true));
-		for(Double d : subMap.values()){
-			temp.addValue(d);
-		}
-		return temp;
-	}
-	
-	public DescriptiveStatistics getSquaredSubStats(int start, int end){
-		DescriptiveStatistics temp = new DescriptiveStatistics();
-		TreeMap<Integer, Double> subMap = new TreeMap<Integer, Double>(dataMap.subMap(start, true, end, true));
-		for(Double d : subMap.values()){
-			temp.addValue(Math.pow(d, 2));
+		TreeMap<Integer, DescriptiveStatistics> subMap = new TreeMap<Integer, DescriptiveStatistics>(dataMap.subMap(start, true, end, true));
+		for(DescriptiveStatistics ds : subMap.values()){
+			for(Double d : ds.getValues()){
+				temp.addValue(d);
+			}
 		}
 		return temp;
 	}

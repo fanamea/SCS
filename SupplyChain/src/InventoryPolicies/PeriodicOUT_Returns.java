@@ -14,7 +14,7 @@ public class PeriodicOUT_Returns extends InventoryPolicy{
 	public PeriodicOUT_Returns() {
 		super();
 		this.period = 1;
-		this.periodMA = 19;
+		this.periodMA = 15;
 	}
 
 	@Override
@@ -46,7 +46,7 @@ public class PeriodicOUT_Returns extends InventoryPolicy{
 		double sx = Math.sqrt((period+meanLeadTime)*Math.pow(sdOrder, 2)+Math.pow(meanOrder, 2)*Math.pow(sdLeadTime, 2));
 		
 		this.outLevel = x + z * sx;
-		System.out.println("OUTLevel: " + outLevel + ", meanOrder: " + meanOrder + ", meanLeadTime: " + meanLeadTime + ", sdOrder: " + sdOrder + ", sdLeadTime: " + sdLeadTime + ", x: " + x + ", z: " + z + ", sx: " + sx);
+		//System.out.println("OUTLevel: " + outLevel + ", meanOrder: " + meanOrder + ", meanLeadTime: " + meanLeadTime + ", sdOrder: " + sdOrder + ", sdLeadTime: " + sdLeadTime + ", x: " + x + ", z: " + z + ", sx: " + sx);
 	}
 
 	@Override

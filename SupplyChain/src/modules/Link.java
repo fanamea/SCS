@@ -12,6 +12,7 @@ import agents.Business;
 import agents.Node;
 import artefacts.Material;
 import artefacts.Order;
+import artefacts.ReturnOrder;
 import artefacts.Shipment;
 import repast.simphony.engine.schedule.ScheduledMethod;
 import repast.simphony.essentials.RepastEssentials;
@@ -31,6 +32,7 @@ public class Link {
 	
 	private ArrayList<Order> orderHistory;
 	private CopyOnWriteArrayList<Order> orderPipeLine;
+	private CopyOnWriteArrayList<ReturnOrder> returnOrderPipeLine;
 	private ArrayList<Shipment> shipmentHistoryDown;
 	private ArrayList<Shipment> shipmentHistoryUp;
 	private CopyOnWriteArrayList<Shipment> shipmentPipeLineDown;
@@ -45,6 +47,7 @@ public class Link {
 		this.material = upstrNode.getProduct();
 		orderHistory = new ArrayList<Order>();
 		orderPipeLine = new CopyOnWriteArrayList<Order>();
+		returnOrderPipeLine = new CopyOnWriteArrayList<ReturnOrder>();
 		shipmentHistoryDown = new ArrayList<Shipment>();
 		shipmentHistoryUp = new ArrayList<Shipment>();
 		shipmentPipeLineDown = new CopyOnWriteArrayList<Shipment>();
@@ -94,7 +97,7 @@ public class Link {
 	}
 	
 	public int genDuration(){
-		return (int)Math.ceil(this.distrDuration.nextDouble());
+		return this.distrDuration.nextInt();
 	}
 	
 	public void setDistrDuration(AbstractDistribution distr){
@@ -113,6 +116,12 @@ public class Link {
 		
 	}
 	
+	public void putReturnOrder(ReturnOrder rOrder){
+		this.returnOrderPipeLine.add(rOrder);
+	}
+	
+	
+	
 	public void putOrder(Order order){
 		this.orderPipeLine.add(order);
 		this.orderHistory.add(order);
@@ -123,6 +132,13 @@ public class Link {
 		copy.addAll(this.orderPipeLine);
 		orderPipeLine.clear();
 		////System.out.println("Link PipeLine size: " + orderPipeLine.size());
+		return copy;
+	}
+	
+	public ArrayList<ReturnOrder> fetchReturnOrders(){
+		ArrayList<ReturnOrder> copy = new ArrayList<ReturnOrder>();
+		copy.addAll(this.returnOrderPipeLine);
+		returnOrderPipeLine.clear();
 		return copy;
 	}
 	

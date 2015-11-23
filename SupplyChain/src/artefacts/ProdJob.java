@@ -16,6 +16,7 @@ private static int count;
 		this.size = s;
 		this.leadTime = lt;
 		this.prodRequest = pReq;
+		System.out.println("NEW PRODJOB: Date: " + date + ", lead time: " + lt);
 	}
 	
 	public int getDate(){

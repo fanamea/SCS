@@ -30,7 +30,11 @@ public abstract class InventoryPolicy{
 	}
 	
 	public double getMeanDemand(int period){
-		return biz.getInformationModule().getMeanDemand(period);
+		return biz.getInformationModule().getMeanDemand(period);		
+	}
+	
+	public double getMeanSquareDemand(int period){
+		return biz.getInformationModule().getMeanSquareDemand(period);		
 	}
 	
 	public double getMeanDemand(){
@@ -38,7 +42,11 @@ public abstract class InventoryPolicy{
 	}
 	
 	public double getMeanLeadTime(){
-		return biz.getInformationModule().getMeanLeadTimeAll();
+		return biz.getInformationModule().getMeanLeadTime(inventory.getMaterial());
+	}
+	
+	public double getMeanLeadTime(int period){
+		return biz.getInformationModule().getMeanLeadTime(inventory.getMaterial(), period);
 	}
 	
 	public double getSDDemand(int period){
@@ -51,6 +59,10 @@ public abstract class InventoryPolicy{
 	
 	public double getSDLeadTime(){
 		return biz.getInformationModule().getSDLeadTimeAll();
+	}
+	
+	public double getSDLeadTime(int period){
+		return biz.getInformationModule().getSDLeadTime(inventory.getMaterial(), period);
 	}
 	
 	public double getOrderFixCost(){

@@ -24,7 +24,9 @@ public class ReturnsAndBWE_Chen extends Setup{
 		super();
 		
 		//Structure
-		sources.add(new MaterialSource(this, 4));
+		sources.add(new MaterialSource(this, 6));
+		retailers.add(new Retailer(this, 5));
+		retailers.add(new Retailer(this, 4));
 		retailers.add(new Retailer(this, 3));
 		retailers.add(new Retailer(this, 2));
 		customers.add(new Customer(this, new NormalDistribution(50.0, 20.0)));
@@ -35,7 +37,9 @@ public class ReturnsAndBWE_Chen extends Setup{
 		
 		links.add(new Link(sources.get(0), retailers.get(0)));
 		links.add(new Link(retailers.get(0), retailers.get(1)));
-		links.add(new Link(retailers.get(1), customers.get(0)));
+		links.add(new Link(retailers.get(1), retailers.get(2)));
+		links.add(new Link(retailers.get(2), retailers.get(3)));
+		links.add(new Link(retailers.get(3), customers.get(0)));
 		
 		for(Link link : links){
 			link.setFixCost(40);
@@ -62,7 +66,7 @@ public class ReturnsAndBWE_Chen extends Setup{
 			ret.setInventoryPolicy(new PeriodicOUT_Returns());
 			ret.setInitialInventory(0);
 			
-			ret.setReturnsAllowed(true);
+			ret.setReturnsAllowed(false);
 		}
 		
 		

@@ -15,7 +15,7 @@ import agents.Business;
 import artefacts.Material;
 import artefacts.Order;
 import artefacts.OrderComparator;
-import artefacts.ReturnReq;
+import artefacts.ReturnOrder;
 import artefacts.ReturnReqComparator;
 import artefacts.Shipment;
 import repast.simphony.essentials.RepastEssentials;
@@ -43,24 +43,23 @@ public class DeliveryModule {
 	 * 
 	 * @param orderList
 	 */
-	public void processOrders(ArrayList<Order> orderList){		
+	public void processOrders(ArrayList<Order> orderList, ArrayList<ReturnOrder> returns){		
 		InformationModule infoModule = biz.getInformationModule();
 		int currentTick = (int)RepastEssentials.GetTickCount();		
 		double sum=0;
 		for(Order order : orderList){
 			sum += order.getSize();
+			orderPipeLine.add(order);
 		}
-		////System.out.println("handDemandData: " + currentTick + ", sum: " + sum);
+
+		for(ReturnOrder rOrder : returns){
+			sum -= rOrder.getSize();			
+		}
+		//System.out.println("handDemandData: " + currentTick + ", sum: " + sum);
 		infoModule.addIntDemandData(currentTick, sum);
 		
-		for(Order order : orderList){
-			if(order.getSize()>0.0){
-				orderPipeLine.add(order);
-			}
-			else{
-				biz.getOrderOpsModule().putReturnOrder(order);
-			}
-		}		
+		biz.getOrderOpsModule().processReturnOrders(returns);
+		
 	}
 	
 	/**

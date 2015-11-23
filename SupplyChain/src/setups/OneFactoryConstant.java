@@ -19,20 +19,18 @@ import artefacts.Material;
 import demandPattern.Constant;
 import demandPattern.NormalDistribution;
 
-public class TwoManufacturersNormal extends Setup{
+public class OneFactoryConstant extends Setup{
 		
-	public TwoManufacturersNormal(){
+	public OneFactoryConstant(){
 		
 		super();
 		
-		sources.add(new MaterialSource(this, 4));
-		manufacturers.add(new Manufacturer(this, 3));
+		sources.add(new MaterialSource(this, 3));
 		manufacturers.add(new Manufacturer(this, 2));
-		customers.add(new Customer(this, new NormalDistribution(10.0, 3.0)));
+		customers.add(new Customer(this, new Constant(10.0)));
 		
 		links.add(new Link(sources.get(0), manufacturers.get(0)));
-		links.add(new Link(manufacturers.get(0), manufacturers.get(1)));
-		links.add(new Link(manufacturers.get(1), customers.get(0)));
+		links.add(new Link(manufacturers.get(0), customers.get(0)));
 		
 		//Define Product
 		
@@ -41,7 +39,7 @@ public class TwoManufacturersNormal extends Setup{
 		
 		//Parameters
 		MaterialSource source = sources.get(0);
-		source.setCapacity(100);
+		source.setCapacity(50);
 		
 		for(Manufacturer m : manufacturers){
 			
@@ -53,27 +51,23 @@ public class TwoManufacturersNormal extends Setup{
 			billOfMaterial.put(upstrProduct, 1.0);
 			m.setBillOfMaterial(billOfMaterial);
 			
-			//Information Sharing
-			m.setCustomerDemandData();
-			//m.setTrustFeedback();
-			
 			//Inventory
 			m.setHoldingCost(2);
 			m.setServiceLevel(0.95);
 			m.setInventoryPlanningAlgorithm(new BookbinderTan());
 			
 			//Order
-			m.setOrderPlanningAlgorithm(new SilverMeal(40, 2));
+			m.setOrderPlanningAlgorithm(new SilverMeal(15, 1));
 			
 			//Production			
 			m.setProductionCapacity(50);
-			m.setProductionTime(2);
+			m.setProductionTime(1);
 			m.setSetUpCost(50);
-			m.setLotSizingAlgorithm(new CapacitatedSilverMeal(50, 2, 50));
+			m.setLotSizingAlgorithm(new CapacitatedSilverMeal(15, 1, 50));
 		}
 		
 		for(Link link : links){
-			link.setFixCost(40);
+			link.setFixCost(15);
 			link.setDistrDuration(RandomHelper.createUniform(1, 1));
 		}
 		

@@ -15,6 +15,7 @@ import demandPattern.NormalDistribution;
 import artefacts.DemandData;
 import artefacts.Material;
 import artefacts.Order;
+import artefacts.ReturnOrder;
 import artefacts.Shipment;
 import InventoryPolicies.InventoryPolicy;
 import repast.simphony.engine.schedule.ScheduledMethod;
@@ -31,6 +32,9 @@ public class Retailer extends Business{
 	}
 	
 	public void initNode(){	
+		
+		
+		
 		this.product = this.upstrLinks.get(0).getMaterial();
 		////System.out.println("Tier: " + this.tier + ", Product: " + this.product);
 		
@@ -43,11 +47,13 @@ public class Retailer extends Business{
 		this.planningTechniques = new PlanningMethods();
 		this.informationModule = new InformationModule(this);
 		
-		this.customer = this.searchCustomer();
+		this.customer = setup.getCustomers().get(0);
+		
 		for(int i=-100; i<1; i++){
 			this.informationModule.addIntDemandData(i, customer.getSampleOrder());
 			Link link = this.getUpstrLinks().get(0);
-			this.informationModule.putLeadTimeData(link, link.genDuration());
+			this.informationModule.putLeadTimeData(link, i, link.genDuration());
+			//System.out.println(informationModule.getSDLeadTime(link.getMaterial()));
 		}
 		
 	}
@@ -61,7 +67,6 @@ public class Retailer extends Business{
 		initialInventory.put(this.product, this.initialInventory);
 		inventoryOpsModule.storeMaterials(initialInventory);
 		
-		informationModule.combineDemandData();
 		inventoryPlanModule.recalcPolicyParams();			
 	}
 	
@@ -82,12 +87,14 @@ public class Retailer extends Business{
 	}
 	
 	public void fetchOrders(){
-		ArrayList<Order> newOrders = new ArrayList<Order>();
+		ArrayList<Order> orders = new ArrayList<Order>();
+		ArrayList<ReturnOrder> returnOrders = new ArrayList<ReturnOrder>();
 		for(Link link : this.downstrLinks){
-			newOrders.addAll(link.fetchOrders());
+			orders.addAll(link.fetchOrders());
+			returnOrders.addAll(link.fetchReturnOrders());
 		}
 		////System.out.println("newOrders.size: " + newOrders.size());
-		deliveryModule.processOrders(newOrders);
+		deliveryModule.processOrders(orders, returnOrders);		
 	}
 	
 	public void dispatchShipments(){
@@ -98,7 +105,6 @@ public class Retailer extends Business{
 		int currentTick = (int)RepastEssentials.GetTickCount();
 		
 		if(currentTick % planningPeriod == 0){
-			informationModule.combineDemandData();
 			inventoryPlanModule.recalcPolicyParams();
 			////System.out.println("Planning Period:" + inventoryPlanModule.getPlanString());
 		}
@@ -188,6 +194,32 @@ public class Retailer extends Business{
 	public double getOUTLevel(){
 		Inventory inventory = inventoryOpsModule.getInventories().get(this.product);
 		return inventory.getPolicy().getOUTLevel();
+	}
+	
+	public double getMeanOUTLevel(){
+		return this.outLevel.getMean();
+	}
+	
+	public double getMeanSDDemand(){
+		return this.sdDemand.getMean();
+	}
+	
+	public double getMeanMeanDemand(){
+		return this.meanDemand.getMean();
+	}
+	
+	public double getMeanLeadTime(){
+		return this.informationModule.getMeanLeadTime(this.product);
+	}
+	
+	public double getSDLeadTime(){
+		return this.informationModule.getSDLeadTime(this.product);
+	}
+
+	@Override
+	public void produce() {
+		// TODO Auto-generated method stub
+		
 	}
 	
 }

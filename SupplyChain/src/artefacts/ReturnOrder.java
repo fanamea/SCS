@@ -4,27 +4,12 @@ import java.util.ArrayList;
 
 import modules.Link;
 
-public class ReturnReq {
+public class ReturnOrder extends Order{
 	
-	private static int count;
 	
-	private int Id;
-	private Link link;
-	private int date;
-	private double size;
-	private double sent;
-	private double arrived;
-	ArrayList<Shipment> shipments;
-	Order order;
-	
-	public ReturnReq(Link link, int d, double s){
-		this.Id = count++;
-		this.link = link;
-		this.date = d;
-		this.size = s;
-		this.sent = 0;
-		this.arrived = 0;
-		this.shipments = new ArrayList<Shipment>();
+	public ReturnOrder(Link link, int d, double s){
+		super(link, d, s);
+		rOrder = true;
 	}
 	
 	public Integer getDate(){
@@ -65,14 +50,6 @@ public class ReturnReq {
 	
 	public void addShipment(Shipment shipment){
 		this.shipments.add(shipment);
-	}
-	
-	public void setOrder(Order order){
-		this.order = order;
-	}
-	
-	public Order getOrder(){
-		return this.order;
 	}
 	
 	public ArrayList<Shipment> getShipments(){

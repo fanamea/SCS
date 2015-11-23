@@ -26,6 +26,10 @@ public abstract class Business extends Node{
 	
 	protected Customer customer;
 	
+	public DescriptiveStatistics outLevel;
+	public DescriptiveStatistics meanDemand;
+	public DescriptiveStatistics sdDemand;
+	
 	protected DeliveryModule deliveryModule;
 	protected OrderOpsModule orderOpsModule;
 	protected InventoryOpsModule inventoryOpsModule;	
@@ -37,16 +41,28 @@ public abstract class Business extends Node{
 	
 	protected double initialInventory;
 	
+	public double invPos;
+	
+	public double getInvPos(){
+		return this.invPos;
+	}
+	
 	public Business(Setup setup, int tier){
 		super(setup, tier);
 		
 		this.initialInventory = 0;
+		
+		this.outLevel = new DescriptiveStatistics();
+		this.meanDemand = new DescriptiveStatistics();
+		this.sdDemand = new DescriptiveStatistics();
 	}
 	
 	public abstract void initNode();	
 	public abstract void plan();	
-	public abstract void prepareTick();	
-	public abstract void receiveShipments();	
+	public abstract void prepareTick();
+	public abstract void planFirstPeriods();
+	public abstract void receiveShipments();
+	public abstract void produce();
 	public abstract void placeOrders();	
 	public abstract void fetchOrders();	
 	public abstract void dispatchShipments();
@@ -99,10 +115,6 @@ public abstract class Business extends Node{
 		this.inventoryPlanModule.setServiceLevels(serviceLevel);
 	}
 	
-	public void setTrustLevel(double trustLevel){
-		this.informationModule.setTrustLevel(trustLevel);
-	}
-	
 	public void setInitialInventory(double inventory){
 		this.initialInventory = inventory;
 	}
@@ -113,12 +125,9 @@ public abstract class Business extends Node{
 	
 	//------------------------Information Sharing-------------------------
 	
-	public DemandData searchCustomerDemandData() {
-		return this.informationModule.searchCustomerDemandData();
-	}
-
-	public void setCustomerDemandData() {
-		this.informationModule.setCustomerDemandData();		
+	
+	public DemandData getDemandData(){
+		return this.informationModule.getInternDemandData();
 	}
 	
 	public void setInformationSharing(boolean b){
@@ -127,6 +136,23 @@ public abstract class Business extends Node{
 	
 	
 	//------------------------Analysis-------------------------------
+	
+	
+	public boolean getSetupSharing(){
+		return this.setup.getSharing();
+	}
+	
+	public double getSetupSDDemand(){
+		return this.setup.getSDDemand();
+	}
+	
+	public double getSetupSDLeadTime(){
+		return this.setup.getSDLeadTime();
+	}
+	
+	public double getSetupMeanLeadTime(){
+		return this.setup.getMeanLeadTime();
+	}
 	
 	public double getBWE(){
 		//System.out.println("BWE: " + this.informationModule.getVarianceOrders() + ", " + customer.getVarianceOrders());
@@ -137,8 +163,12 @@ public abstract class Business extends Node{
 		return this.informationModule.getVarianceOrders();
 	}
 	
-	public double getTrustLevel(){
-		return this.informationModule.getTrustLevel();
+	public double getVarianceOrders5200(){
+		return this.informationModule.getVarianceOrders(200, 5200);
+	}
+	
+	public double getMeanOrder(){
+		return this.informationModule.getMeanOrders();
 	}
 	
 	public double getOrderAmountIn(){

@@ -60,7 +60,7 @@ public class OneManufacturerConst extends Setup{
 			
 			//Production			
 			m.setProductionCapacity(20);
-			m.setProductionTime(2);
+			m.setProductionTime(1);
 			m.setSetUpCost(50);
 			m.setLotSizingAlgorithm(new CapacitatedSilverMeal(50, 2, 20));
 		}

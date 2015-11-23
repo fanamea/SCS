@@ -48,7 +48,6 @@ public class TwoRetailers_InfSh extends Setup{
 			
 			//Information Sharing
 			ret.setCustomerDemandData();
-			ret.setTrustLevel(1.0);
 			
 			//Inventory
 			ret.setHoldingCost(2);

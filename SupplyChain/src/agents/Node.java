@@ -20,7 +20,6 @@ public abstract class Node {
 	
 	public abstract void initNode();
 	public abstract String getInformationString();
-	public abstract DemandData searchCustomerDemandData();
 	
 	
 	public Node(Setup setup, int tier){
@@ -41,12 +40,20 @@ public abstract class Node {
 		this.downstrLinks.add(link);
 	}
 	
+	public ArrayList<Link> getUpstreamLinks(){
+		return this.upstrLinks;
+	}
+	
 	public String getId(){
 		return Integer.toString(this.Id);
 	}
 	
 	public int getTier(){
 		return this.tier;
+	}
+	
+	public Setup getSetup(){
+		return this.setup;
 	}
 	
 	public ArrayList<Link> getUpstrLinks(){
@@ -62,15 +69,6 @@ public abstract class Node {
 			this.product = this.upstrLinks.get(0).getMaterial();
 		}
 		return this.product;
-	}
-	
-	public Customer searchCustomer(){
-		if(this.tier==1){
-			return (Customer)this;
-		}
-		else{
-			return (Customer)this.downstrLinks.get(0).getDownstrNode().searchCustomer();
-		}
 	}
 	
 	public void print(){

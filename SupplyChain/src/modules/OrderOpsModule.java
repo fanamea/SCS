@@ -11,6 +11,7 @@ import agents.Business;
 import artefacts.Material;
 import artefacts.Order;
 import artefacts.OrderReq;
+import artefacts.ReturnOrder;
 import artefacts.Shipment;
 import repast.simphony.essentials.RepastEssentials;
 import modules.Link;
@@ -21,6 +22,7 @@ public class OrderOpsModule {
 	private ArrayList<Link> linkList;
 	private HashMap<Material, ArrayList<Link>> suppliers;
 	private HashMap<Material, CopyOnWriteArrayList<Order>> orderPipeLine;
+	private CopyOnWriteArrayList<ReturnOrder> returnOrderPipeLine;
 	private HashMap<Material, CopyOnWriteArrayList<OrderReq>> orderReqPipeLine;
 	
 	public OrderOpsModule(Business biz){
@@ -35,6 +37,7 @@ public class OrderOpsModule {
 			suppliers.get(link.getMaterial()).add(link);
 		}
 		this.orderPipeLine = new HashMap<Material, CopyOnWriteArrayList<Order>>();
+		this.returnOrderPipeLine = new CopyOnWriteArrayList<ReturnOrder>();
 		this.orderReqPipeLine = new HashMap<Material, CopyOnWriteArrayList<OrderReq>>();
 		for(Material material : suppliers.keySet()){
 			orderPipeLine.put(material, new CopyOnWriteArrayList<Order>());
@@ -43,25 +46,28 @@ public class OrderOpsModule {
 		
 	}
 	
-	public void dispatchReturn(Order order){
-		Material product = order.getLink().getMaterial();
+	public void handleReturn(OrderReq orderReq){
+		Material product = orderReq.getMaterial();
 		HashMap<Material, Double> request = new HashMap<Material, Double>();
-		double stillToShip = order.getShortageSent();
-		request.put(product, stillToShip);
+		Link link = suppliers.get(product).get(0);
+		double size = Math.abs(orderReq.getSize());
+		request.put(product, size);
 		HashMap<Material, Double> shipableAmount = biz.getInventoryOpsModule().requestMaterials(request);
-		Link link = order.getLink();
+		
 		int currentTick = (int)RepastEssentials.GetTickCount();
+		ReturnOrder rOrder = new ReturnOrder(link, currentTick, shipableAmount.get(product));
+		rOrder.setReturnOrder(true);
+		if(rOrder.isReturnOrder()){
+			//System.out.println("IS RETURN ORDER: " + rOrder.getSize());
+		}
 		if(shipableAmount.get(product) > 0){
-			Shipment shipment = new Shipment(link, currentTick, shipableAmount.get(product), link.genDuration(), order);
+			Shipment shipment = new Shipment(link, currentTick, shipableAmount.get(product), link.genDuration(), rOrder);
 			////System.out.println("Shipment: " + shipment);
-			order.addShipment(shipment);
-			order.incrSent(shipableAmount.get(product));
+			rOrder.addShipment(shipment);
+			link.putReturnOrder(rOrder);
 			link.induceShipmentUp(shipment);
 		}
-		////System.out.println(order.isSent());
-		if(!order.isSent()){
-			System.out.println("RETURN PROBLEM!!!!");
-		}
+		
 	}
 	
 	/**
@@ -77,20 +83,22 @@ public class OrderOpsModule {
 			for(OrderReq orderReq : orderReqPipeLine.get(material)){
 				if(orderReq.getDate()<=currentTick){
 					Link supplier = suppliers.get(material).get(0);
-					Order newOrder = new Order(supplier, currentTick, orderReq.getSize(), orderReq);
-					pipeline.remove(orderReq);
-					
-					supplier.putOrder(newOrder);
-					biz.getInformationModule().putOrderData(currentTick, newOrder.getSize());
-					double fixCost = biz.getOrderPlanModule().getOrderFixCost(material);
-					biz.getInformationModule().addOrderCost(fixCost);
-					placed = true;
 					
 					if(orderReq.getSize()>0.0){
+						Order newOrder = new Order(supplier, currentTick, orderReq.getSize(), orderReq);
+						pipeline.remove(orderReq);
+						
+						supplier.putOrder(newOrder);
 						orderPipeLine.get(material).add(newOrder);
-					}					
-					else if(orderReq.getSize()<0.0){
-						dispatchReturn(newOrder);
+						biz.getInformationModule().putOrderData(currentTick, newOrder.getSize());
+						double fixCost = biz.getOrderPlanModule().getOrderFixCost(material);
+						biz.getInformationModule().addOrderCost(fixCost);
+						placed = true;
+						
+					}
+					else{
+						handleReturn(orderReq);
+						pipeline.remove(orderReq);
 					}
 					
 					if(orderReq.getDate()<currentTick){
@@ -111,19 +119,46 @@ public class OrderOpsModule {
 	 * Bei Teillieferungen gewichteter Durchschnitt
 	 * @param shipment
 	 */
-	public void maintainLeadTimeData(Shipment shipment){
+	public void maintainLeadTimeDataWeighed(Shipment shipment){
 		Order order = shipment.getOrder();
-		double sum = 0;
-		if(order.isSent()){
+		if(order.hasArrived() && !order.isReturnOrder()){
+			double sum = 0;
 			ArrayList<Shipment> shipments = order.getShipments();
 			for(Shipment shipm : shipments){
 				double leadTime = shipm.getArriving()-order.getDate();
 				double weight = shipm.getSize()/order.getSize();
 				sum += weight*leadTime;
 			}
+			biz.getInformationModule().putLeadTimeData(shipment.getLink(), sum);
 		}
-		biz.getInformationModule().putLeadTimeData(shipment.getLink(), sum);
-		//System.out.println("LeadTimeData: " + sum);
+	}
+	
+	public void maintainLeadTimeDataLast(Shipment shipment){
+		Order order = shipment.getOrder();
+		if(order.hasArrived() && !order.isReturnOrder()){
+			double leadTime = shipment.getArriving()-order.getDate();
+			biz.getInformationModule().putLeadTimeData(shipment.getLink(), leadTime);
+		}
+	}
+	
+	public void maintainLeadTimeDataEach(Shipment shipment){
+		Order order = shipment.getOrder();
+		if(!order.isReturnOrder()){
+			double leadTime = shipment.getArriving()-order.getDate();
+			biz.getInformationModule().putLeadTimeData(shipment.getLink(), leadTime);
+		}
+	}
+	
+	public void maintainLeadTimeDataTransportation(Shipment shipment){
+		Order order = shipment.getOrder();
+		if(!order.isReturnOrder()){
+			double leadTime = shipment.getDuration();
+			biz.getInformationModule().putLeadTimeData(shipment.getLink(), leadTime);
+		}
+	}
+	
+	public void processReturnOrders(ArrayList<ReturnOrder> rOrders){
+		this.returnOrderPipeLine.addAll(rOrders);
 	}
 	
 	public void processInShipments(ArrayList<Shipment> shipments){
@@ -138,12 +173,15 @@ public class OrderOpsModule {
 			}
 			Order order = shipment.getOrder();
 			order.incrArrived(shipment.getSize());
-			if(order.hasArrived()){
+			maintainLeadTimeDataTransportation(shipment);
+			if(order.hasArrived() && !order.isReturnOrder()){
 				orderPipeLine.get(shipment.getMaterial()).remove(order);
+				
 				//System.out.println("Shipment arrived: " + shipment);
 			}
-			if(order.getSize()>0.0){
-				maintainLeadTimeData(shipment);
+			if(order.isReturnOrder()){
+				returnOrderPipeLine.remove(order);
+				//System.out.println("RETURN ORDER REMOVED");
 			}
 			////System.out.println("maintainLeadTimeData, Tier: " + biz.getTier() + ", " + shipment);
 		}
@@ -157,14 +195,18 @@ public class OrderOpsModule {
 		}
 	}
 	
-	public void putReturnOrder(Order order){
-		this.orderPipeLine.get(order.getLink().getMaterial()).add(order);
-	}
 	
 	public void handOrderReqs(Material material, ArrayList<OrderReq> orderReqs){
 		this.orderReqPipeLine.get(material).addAll(orderReqs);
 	}
 	
+	public double getProcessingReturnOrders(){
+		double sum = 0;
+		for(ReturnOrder rOrder : returnOrderPipeLine){
+			sum += rOrder.getSize();
+		}
+		return sum;
+	}
 	
 	public double getProcessingOrders(Material material){
 		double sum = 0;

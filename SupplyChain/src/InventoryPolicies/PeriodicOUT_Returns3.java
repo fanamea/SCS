@@ -38,15 +38,20 @@ public class PeriodicOUT_Returns3 extends InventoryPolicy{
 	private void calcOutLevel(){
 		Material material = inventory.getMaterial();
 		double meanOrder = getMeanDemand(this.periodMA);
+		double meanSquaredOrders = getMeanSquareDemand(this.periodMA);
 		double meanLeadTime = getMeanLeadTime();
 		double sdOrder = getSDDemand(this.periodMA);
 		double sdLeadTime = getSDLeadTime();
 		double x = (period+meanLeadTime)*meanOrder;
 		double z = 2.0;
-		double sx = Math.sqrt((period+meanLeadTime)*Math.pow(sdOrder, 2)+Math.pow(meanOrder, 2)*Math.pow(sdLeadTime, 2));
+		double sx = Math.sqrt((period+meanLeadTime)*Math.pow(sdOrder, 2)+ Math.pow(meanOrder, 2) * Math.pow(sdLeadTime, 2));
 		
 		this.outLevel = x + z * sx;
-		System.out.println("OUTLevel: " + outLevel + ", meanOrder: " + meanOrder + ", meanLeadTime: " + meanLeadTime + ", sdOrder: " + sdOrder + ", sdLeadTime: " + sdLeadTime + ", x: " + x + ", z: " + z + ", sx: " + sx);
+		
+		biz.outLevel.addValue(outLevel);
+		biz.meanDemand.addValue(meanOrder);
+		biz.sdDemand.addValue(sdOrder);
+		//System.out.println("OUTLevel: " + outLevel + ", meanOrder: " + meanOrder + ", meanLeadTime: " + meanLeadTime + ", sdOrder: " + sdOrder + ", sdLeadTime: " + sdLeadTime + ", x: " + x + ", z: " + z + ", sx: " + sx);
 	}
 
 	@Override

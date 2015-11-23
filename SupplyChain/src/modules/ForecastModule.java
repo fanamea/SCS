@@ -50,8 +50,8 @@ public class ForecastModule{
 			DataPoint dp = (DataPoint)it.next();
 			forecast.put((int)dp.getIndependentValue("Tick"), dp.getDependentValue());
 		}
-		//System.out.println("DemandData: " + this.demandData.getDataMap());
-		//System.out.println("Forecast: " + forecast);
+		System.out.println("DemandData: " + this.demandData.getDataMap());
+		System.out.println("Forecast: " + forecast);
 		return forecast;
 	}
 	

@@ -9,27 +9,26 @@ import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 
 import repast.simphony.essentials.RepastEssentials;
 import agents.Business;
+import agents.InformationSharing;
 import artefacts.DemandData;
+import artefacts.LeadTimeData;
 import artefacts.Material;
 
 public class InformationModule {
 	
 	private Business biz;
+	private InformationSharing sharing;
 	private DemandData orderData;
 	private DemandData internDemandData;
 	private DemandData externDemandData;
 	private DemandData combinedDemandData;
-	private double trustLevel;
-	private boolean trustFeedback;
-	private int lastCombined;
+	
 	private boolean informationSharing;
 	
-	private HashMap<Link, DescriptiveStatistics> leadTimeData;
+	private HashMap<Link, LeadTimeData> leadTimeData;
 	private DescriptiveStatistics allLeadTimeData;
 	private TreeMap<Integer, Double> fcIntern;
-	private TreeMap<Integer, Double> histFcIntern;
 	private TreeMap<Integer, Double> fcExtern;
-	private TreeMap<Integer, Double> histFcExtern;
 	private TreeMap<Integer, Double> fcCombined;
 	private TreeMap<Integer, Double> histFcCombined;
 	
@@ -43,6 +42,7 @@ public class InformationModule {
 	private double arrivingShipments;
 	private double planningTimeShipments;
 	private double ordered;
+	private double meanDemand;
 	private HashMap<Integer, Double> orderPlan;
 	private HashMap<Integer, Double> adjustedDueListHist;
 	
@@ -50,113 +50,50 @@ public class InformationModule {
 	
 	public InformationModule(Business biz){
 		this.biz = biz;
+		this.sharing = biz.getSetup().getInformationSharing();
 		this.orderData = new DemandData();
 		this.internDemandData = new DemandData();
-		this.trustLevel = 0.0;
-		this.trustFeedback = false;
+		this.combinedDemandData = this.internDemandData;
 		this.informationSharing = false;
 		this.fcIntern = new TreeMap<Integer, Double>();
-		this.histFcIntern = new TreeMap<Integer, Double>();
 		this.fcExtern = new TreeMap<Integer, Double>();
-		this.histFcExtern = new TreeMap<Integer,Double>();
 		this.fcCombined = new TreeMap<Integer, Double>();
 		this.histFcCombined = new TreeMap<Integer, Double>();
-		if(informationSharing){
-			this.combinedDemandData = new DemandData();
-		}
-		else{
-			this.combinedDemandData = this.internDemandData;
-		}		
+		
 		this.orderPlan = new HashMap<Integer, Double>();
 		this.adjustedDueListHist = new HashMap<Integer, Double>();		
 		this.allLeadTimeData = new DescriptiveStatistics();
-		this.leadTimeData = new HashMap<Link, DescriptiveStatistics>();
+		this.leadTimeData = new HashMap<Link, LeadTimeData>();
 		for(Link link : biz.getUpstrLinks()){
-			leadTimeData.put(link, new DescriptiveStatistics());
+			leadTimeData.put(link, new LeadTimeData());
 		}
 	}
 	
 	public void forecast(int start, int end){
 		biz.getForecastModule().setDemandData(internDemandData);
 		fcIntern = biz.getForecastModule().getForecast(start, end);
-		this.histFcIntern.putAll(fcIntern);
 		
-		if(!informationSharing){
-			this.fcCombined = fcIntern;
-			this.histFcCombined.putAll(fcIntern);
-		}
-		else{
+		System.out.println("internDemandData: " + internDemandData.getDataMap());
+		System.out.println("informationSharing: " + informationSharing);
+		
+		
+		if(informationSharing){
 			biz.getForecastModule().setDemandData(externDemandData);
 			this.fcExtern = biz.getForecastModule().getForecast(start, end);
-			this.histFcExtern.putAll(fcExtern);
-			this.fcCombined = combineDataSeries(fcIntern, fcExtern, trustLevel);
-			this.histFcCombined.putAll(fcCombined);
+			//TrustModul
+			this.fcCombined = fcExtern;
+			
+		}
+		else{			
+			this.fcCombined = fcIntern;
+			this.histFcCombined.putAll(fcIntern);
 		}				
 	}
 	
-	public void combineDemandData(){
-		if(informationSharing){
-			int currentTick = (int)RepastEssentials.GetTickCount();
-			double intern;
-			double extern;
-			double comb;
-			Integer i = lastCombined;
-			for(i=lastCombined; i<currentTick; i++){
-				intern = this.internDemandData.getDemandData(i);
-				extern = this.externDemandData.getDemandData(i);
-				comb = (1-trustLevel)*intern+trustLevel*extern;
-				combinedDemandData.handDemandData(i, comb);
-			}
-			lastCombined = (int)RepastEssentials.GetTickCount();
-		}
-	}
 	
-	public void recalcTrustLevel(){
-		if(informationSharing && trustFeedback){
-			int currentTick = (int)RepastEssentials.GetTickCount();
-			int pivot = currentTick-biz.getPlanningPeriod();
-			
-			TreeMap<Integer, Double> subMapIntern = new TreeMap<Integer, Double>(this.histFcIntern.subMap(pivot, true, currentTick, false));
-			double errorIntern = getErrorFc(this.internDemandData, subMapIntern);
-			TreeMap<Integer, Double> subMapExtern = new TreeMap<Integer, Double>(this.histFcExtern.subMap(pivot, true, currentTick, false));
-			double errorExtern = getErrorFc(this.internDemandData, subMapExtern);
-			
-			double adjust = 0;
-			if(errorIntern>errorExtern){
-				adjust = 0.05;			
-			}
-			else{
-				adjust = -0.05;
-			}
-			this.trustLevel += adjust;
-			
-			this.trustLevel = Math.min(trustLevel, 1);
-			this.trustLevel = Math.max(trustLevel, 0);
-		}
-	}
 	
-	private double getErrorFc(DemandData demandData, TreeMap<Integer, Double> fc){
-		double sum = 0;
-		for(Integer i : fc.keySet()){
-			//System.out.println("I: " + i);
-			sum += Math.pow(demandData.getDemandData(i) - fc.get(i), 2);
-		}
-		return Math.sqrt(sum/fc.size()-1);
-	}
 	
-	public TreeMap<Integer, Double> combineDataSeries(TreeMap<Integer, Double> ds1, TreeMap<Integer, Double> ds2, double factor){
-		TreeMap<Integer, Double> fcCombined = new TreeMap<Integer, Double>();
-		double data1;
-		double data2;
-		double combined;
-		for(Integer i : ds1.keySet()){
-			data1 = ds1.get(i);
-			data2 = ds2.get(i);
-			combined = (1-factor)*data1 + factor*data2;
-			fcCombined.put(i, combined);
-		}
-		return fcCombined;
-	}
+	
 	
 	public double getOrdered(){
 		return this.ordered;
@@ -166,13 +103,31 @@ public class InformationModule {
 		this.ordered = d;
 	}
 	
+	public double getMeanOrders(){
+		return this.orderData.getMean();
+	}
+	
+	public double getSDOrders(){
+		return this.orderData.getStandardDeviation();
+	}
+	
 	public void putLeadTimeData(Link link, double d){
-		this.leadTimeData.get(link).addValue(d);
+		this.leadTimeData.get(link).handData(d);
+		this.allLeadTimeData.addValue(d);		
+	}
+	
+	public void putLeadTimeData(Link link, int tick, double d){
+		this.leadTimeData.get(link).handData(tick, d);
 		this.allLeadTimeData.addValue(d);		
 	}
 	
 	public double getMeanLeadTime(Link link){
 		return leadTimeData.get(link).getMean();
+	}
+	
+	public double getMeanLeadTime(Material material, int period){
+		Link link = biz.getOrderPlanModule().getLink(material);
+		return leadTimeData.get(link).getMean(period);
 	}
 	
 	public double getSDLeadTime(Link link){
@@ -188,6 +143,11 @@ public class InformationModule {
 		return leadTimeData.get(link).getStandardDeviation();
 	}
 	
+	public double getSDLeadTime(Material material, int period){
+		Link link = biz.getOrderPlanModule().getLink(material);
+		return leadTimeData.get(link).getStandardDeviation(period);
+	}
+	
 	public double getMeanLeadTime(Material material){
 		Link link = biz.getOrderPlanModule().getLink(material);
 		return getMeanLeadTime(link);		
@@ -201,28 +161,8 @@ public class InformationModule {
 		return this.adjustedDueListHist.get(tick);
 	}
 	
-	public double getForecast(int tick){
-		return this.histFcCombined.get(tick);
-	}
-	
 	public void putOrderData(int tick, double order){
 		this.orderData.handDemandData(tick, order);
-	}
-	
-	public void setInformationTrust(double usageLevel){
-		this.trustLevel = usageLevel;
-	}
-	
-	public void setTrustFeedback(){
-		this.trustFeedback = true;
-	}
-	
-	public double getTrustLevel(){
-		return this.trustLevel;
-	}
-	
-	public void setTrustLevel(double trustLevel){
-		this.trustLevel = trustLevel;
 	}
 	
 	public void setPlanningLeadTimeShipments(double d){
@@ -273,6 +213,14 @@ public class InformationModule {
 		return this.orderData.getVariance();
 	}
 	
+	public double getVarianceOrders(int period){
+		return this.orderData.getVariance(period);
+	}
+	
+	public double getVarianceOrders(int start, int end){
+		return this.orderData.getVariance(start, end);
+	}
+	
 	public double getMeanDemand(){
 		return this.combinedDemandData.getMean();
 	}
@@ -281,13 +229,10 @@ public class InformationModule {
 		return this.combinedDemandData.getMean(period);
 	}
 	
-	public void setCustomerDemandData(){
-		setExtDemandData(searchCustomerDemandData());
-		//System.out.println("Tier: " + biz.getTier());
-		//System.out.println("InternDemandData: " + internDemandData);
-		//System.out.println("ExternDemandData: " + externDemandData);
-		
+	public double getMeanSquareDemand(int period){
+		return this.combinedDemandData.getSquareMean(period);
 	}
+	
 	
 	public double getVarianceCustomerOrders(){
 		return this.externDemandData.getVariance();
@@ -314,6 +259,14 @@ public class InformationModule {
 	
 	public void setInformationSharing(boolean b){
 		this.informationSharing = b;
+		if(b){
+			if(this.sharing==null){System.out.println("sharing = null");}
+			this.externDemandData = this.sharing.getCustomerDemandData();
+			this.combinedDemandData = this.externDemandData;
+		}
+		else{
+			this.combinedDemandData = this.internDemandData;
+		}
 	}
 	
 	public double getPlannedProduction(){
@@ -416,6 +369,14 @@ public class InformationModule {
 		return this.sumBacklog/RepastEssentials.GetTickCount();
 	}
 	
+	public void setMeanDemandPol(double mean){
+		this.meanDemand = mean;
+	}
+	
+	public double getMeanDemandPol(){
+		return this.meanDemand;
+	}
+		
 	public double getSumFC(int start, int end){
 		double sum = 0;
 		for(Double d : this.histFcCombined.subMap(start, true, end, true).values()){
@@ -424,13 +385,6 @@ public class InformationModule {
 		return sum;
 	}
 	
-	public DemandData searchCustomerDemandData(){
-		if(this.biz.getTier()==2){
-			return this.internDemandData;
-		}
-		else{
-			return this.biz.getDownstrLinks().get(0).getDownstrNode().searchCustomerDemandData();
-		}
-	}
+	
 
 }

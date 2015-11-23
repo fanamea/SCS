@@ -11,6 +11,7 @@ import demandPattern.NormalDistribution;
 import demandPattern.RandomWalk;
 import agents.Business;
 import agents.Customer;
+import agents.InformationSharing;
 import agents.Manufacturer;
 import agents.MaterialSource;
 import agents.Node;
@@ -18,6 +19,7 @@ import agents.Retailer;
 import artefacts.TierComparator;
 import repast.simphony.engine.schedule.ScheduledMethod;
 import repast.simphony.essentials.RepastEssentials;
+import repast.simphony.random.RandomHelper;
 
 public abstract class Setup {
 	
@@ -28,17 +30,26 @@ public abstract class Setup {
 	protected ArrayList<Customer> customers;
 	protected ArrayList<Link> links;
 	protected ArrayList<ArrayList<Integer>> tiers;
-	protected boolean shareCustomerDemandData;
+	protected InformationSharing informationSharing;
+	protected boolean sharing;
+	protected double sdLeadTime;
+	protected double meanLeadTime;
 	
 	public Setup(){
 		sources = new ArrayList<MaterialSource>();
 		manufacturers = new ArrayList<Manufacturer>();
 		retailers = new ArrayList<Retailer>();
+		businesses = new ArrayList<Business>();
 		customers = new ArrayList<Customer>();
-		links = new ArrayList<Link>();		
+		links = new ArrayList<Link>();
+		this.sharing = false;
+		this.sdLeadTime = 0;
+		this.meanLeadTime = 4;
 	}
 		
 	public void init(){
+		
+		this.informationSharing = new InformationSharing(this);
 		
 		for(MaterialSource source : sources){
 			source.initNode();
@@ -49,33 +60,31 @@ public abstract class Setup {
 		for(Manufacturer m : manufacturers){
 			m.initNode();
 		}
+		
 		for(Customer customer : customers){
 			customer.initNode();
 		}
 		
-		//init information sharing
-		for(Retailer retailer : retailers){
-			retailer.setCustomerDemandData();
-		}
-		for(Manufacturer m : manufacturers){
-			m.setCustomerDemandData();
-		}
+		businesses.addAll(retailers);
+		businesses.addAll(manufacturers);
 		
-		Collections.sort(retailers, new TierComparator());
+		this.informationSharing.init();	
+		
+		Collections.sort(businesses, new TierComparator());
 		
 	}
 	
 	@ScheduledMethod(start=1, interval=1, priority=12)
 	public void prepareTick(){		
-		for(Retailer ret : this.retailers){
-			ret.prepareTick();
+		for(Business biz : this.businesses){
+			biz.prepareTick();
 		}		
 	}
 	
 	@ScheduledMethod(start=1, interval=0, priority=11)
 	public void planFirstPeriods(){		
-		for(Retailer ret : this.retailers){
-			ret.planFirstPeriods();
+		for(Business biz : this.businesses){
+			biz.planFirstPeriods();
 		}	
 	}
 	
@@ -85,15 +94,27 @@ public abstract class Setup {
 			customer.placeOrder();
 		}
 		
-		for(Retailer ret : this.retailers){		
-			ret.receiveShipments();
-			ret.fetchOrders();
-			ret.dispatchShipments();
-			ret.plan();
-			ret.placeOrders();
-			ret.collectData();
-			ret.collectRetailerData();
-		}	
+		
+		/*
+		for(Business biz : this.businesses){		
+			biz.plan();
+			biz.placeOrders();
+		}
+		*/
+		
+		
+		
+		
+		for(Business biz : this.businesses){
+			biz.receiveShipments();
+			biz.produce();
+			biz.fetchOrders();
+			biz.dispatchShipments();
+			biz.plan();
+			biz.placeOrders();
+			biz.collectData();
+			//biz.collectRetailerData();
+		}
 		
 		for(MaterialSource source : this.sources){
 			source.shipOrders();
@@ -101,13 +122,67 @@ public abstract class Setup {
 	}
 	
 	
+	@ScheduledMethod(start=5210, interval=0, priority=1)
+	public void printVariance(){
+		for(Business biz : businesses){
+			System.out.println("Tier: " + biz.getTier() + ", SD: " + Math.sqrt(biz.getVarianceOrders5200()) + ", VarOrder: " + biz.getVarianceOrders5200() + ", MeanOrder: " + biz.getMeanOrder());
+		}
+	}
+	
+	public void setSDDemand(double sd){
+		this.customers.get(0).setSD(sd);
+	}
+	
+	public double getSDDemand(){
+		return this.customers.get(0).getSD();
+	}
+	
+	public void setSharing(boolean b){
+		for(Business biz : businesses){
+			biz.setInformationSharing(b);
+		}
+		this.sharing = b;
+	}
+	
+	public boolean getSharing(){
+		return this.sharing;
+	}
+	
+	public void setMeanLeadTime(double mean){
+		for(Link link : links){
+				link.setDistrDuration(RandomHelper.createUniform(mean, mean));		
+		}
+		this.meanLeadTime = mean;
+	}
+	
+	public void setSDLeadTime(double sd){
+		double mean = this.meanLeadTime;
+		for(Link link : links){
+			if(sd==0){
+				link.setDistrDuration(RandomHelper.createUniform(mean, mean));
+			}
+			else{
+				
+				double var = Math.pow(sd, 2);
+				double alpha = mean*mean/var;
+				double lambda = 1/(var/mean);
+				link.setDistrDuration(RandomHelper.createGamma(alpha, lambda));
+			}			
+		}
+		this.sdLeadTime = sd;
+	}
+	
+	public double getMeanLeadTime(){
+		return this.meanLeadTime;
+	}
+	
+	public double getSDLeadTime(){
+		return this.sdLeadTime;
+	}
 	
 	public ArrayList<Business> getBusinesses(){
-		ArrayList<Business> businesses = new ArrayList<Business>();
-		businesses.addAll(retailers);
-		businesses.addAll(manufacturers);
-		return businesses;
-	}	
+		return this.businesses;
+	}
 	
 	public ArrayList<Customer> getCustomers(){
 		return this.customers;
@@ -127,6 +202,10 @@ public abstract class Setup {
 	
 	public ArrayList<Link> getLinks(){
 		return this.links;
+	}
+	
+	public InformationSharing getInformationSharing(){
+		return this.informationSharing;
 	}
 	
 	public void print(){

@@ -90,11 +90,7 @@ public class MaterialSource extends Node{
 		return string;
 	}
 
-	@Override
-	public DemandData searchCustomerDemandData() {
-		// TODO Auto-generated method stub
-		return null;
-	}
+	
 
 	@Override
 	public double getVarianceOrders() {

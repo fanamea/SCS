@@ -74,19 +74,22 @@ public class InventoryOpsModule {
 	public double getInventoryPosition(Material material){
 		double inventoryLevel = getInventoryLevel(material);
 		double ordered;
+		double returns;
 		double backlog;
 		
 		if(biz.getProductionOpsModule() != null && material == biz.getProduct()){
 			ordered = biz.getProductionOpsModule().getProcessingProduction();
+			returns = biz.getOrderOpsModule().getProcessingReturnOrders();
 			backlog = biz.getProductionOpsModule().getBacklogStart();
 		}
 		else{
 			ordered = biz.getOrderOpsModule().getProcessingOrders(material);
+			returns = biz.getOrderOpsModule().getProcessingReturnOrders();
 			backlog = biz.getDeliveryModule().getBacklog();
 		}
 		
-		////System.out.println("inventoryLevel: " + inventoryLevel + ", ordered: " + ordered + ", backlog: " + backlog);
-		return inventoryLevel + ordered - backlog;		
+		//System.out.println("Tier: " + biz.getTier() + ", inventoryLevel: " + inventoryLevel + ", ordered: " + ordered + ", returns: " + returns + ", backlog: " + backlog);
+		return inventoryLevel + ordered + returns - backlog;
 	}
 	
 	/**

@@ -6,16 +6,17 @@ import modules.Link;
 
 public class Order {
 	
-	private static int count;
+	protected static int count;
 	
-	private int Id;
-	private Link link;
-	private int date;
-	private double size;
-	private double sent;
-	private double arrived;
-	private OrderReq orderReq;
-	ArrayList<Shipment> shipments;
+	protected int Id;
+	protected Link link;
+	protected int date;
+	protected double size;
+	protected double sent;
+	protected double arrived;
+	protected OrderReq orderReq;
+	protected ArrayList<Shipment> shipments;
+	protected boolean rOrder;
 	
 	public Order(Link link, int d, double s, OrderReq orderReq){
 		this.Id = count++;
@@ -26,6 +27,7 @@ public class Order {
 		this.arrived = 0;
 		this.orderReq = orderReq;
 		this.shipments = new ArrayList<Shipment>();
+		rOrder = false;
 	}
 	
 	public Order(Link link, int d, double s){
@@ -36,6 +38,7 @@ public class Order {
 		this.sent = 0;
 		this.arrived = 0;
 		this.shipments = new ArrayList<Shipment>();
+		rOrder = false;
 	}
 	
 	public Integer getDate(){
@@ -84,6 +87,14 @@ public class Order {
 	
 	public OrderReq getOrderReq(){
 		return this.orderReq;
+	}
+	
+	public void setReturnOrder(boolean b){
+		this.rOrder = b;
+	}
+	
+	public boolean isReturnOrder(){
+		return rOrder;
 	}
 	
 	public String toString(){

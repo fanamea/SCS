@@ -196,6 +196,7 @@ public class ProductionPlanModule {
 	
 	public void setProductionTime(int productionTime){
 		this.productionTime = productionTime;
+		System.out.println("set production time: " + productionTime);
 	}
 	
 	public void setLotSizingAlgorithm(LotSizingAlgorithm lotSizingAlgo){

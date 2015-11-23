@@ -10,8 +10,10 @@ import cern.jet.random.AbstractDistribution;
 import artefacts.DemandData;
 import artefacts.Order;
 import artefacts.OrderReq;
+import artefacts.ReturnOrder;
 import artefacts.Shipment;
 import demandPattern.DemandPattern;
+import demandPattern.NormalDistribution;
 import repast.simphony.engine.schedule.ScheduledMethod;
 import repast.simphony.essentials.RepastEssentials;
 import repast.simphony.random.RandomHelper;
@@ -24,6 +26,7 @@ public class Customer extends Node{
 	private DemandData demandData;
 	private DescriptiveStatistics received;
 	private boolean negativeOrders;
+	private double sd;
 	
 	public Customer(Setup setup, DemandPattern pattern){
 		super(setup, 1);
@@ -32,9 +35,19 @@ public class Customer extends Node{
 		this.demandData = new DemandData();
 		this.received = new DescriptiveStatistics();
 		this.negativeOrders = false;
+		this.sd = 0.0;
 	}
 	
 	public void initNode(){		
+	}
+	
+	public void setSD(double sd){
+		this.pattern = new NormalDistribution(100.0, sd);
+		this.sd = sd;
+	}
+	
+	public double getSD(){
+		return this.sd;
 	}
 	
 	public ArrayList<Double> getSampleData(int size){
@@ -49,6 +62,15 @@ public class Customer extends Node{
 	public void placeOrder(){
 		////System.out.println("placeOrderCustomer");
 		double size = pattern.getNextDouble();
+		int tick = (int)RepastEssentials.GetTickCount();
+		/*
+		if(tick % 2 == 0){
+			size = 110;
+		}
+		else{
+			size = 90;
+		}
+		*/
 		if(!this.negativeOrders){
 			size = Math.max(0.0, size);
 		}
@@ -56,14 +78,19 @@ public class Customer extends Node{
 		ArrayList<Order> orderList = new ArrayList<Order>();
 		Link link = upstrLinks.get(0);
 		int currentTick = (int)RepastEssentials.GetTickCount();
-		Order newOrder = new Order(link, currentTick, size);
-		orderList.add(newOrder);
-		upstrLinks.get(0).putOrders(orderList);
-		if(size<0.0){
-			Shipment returnShipment = new Shipment(link, currentTick, newOrder.getSize(), link.genDuration(), newOrder);
-			newOrder.addShipment(returnShipment);
+		
+		if(size>0){
+			Order newOrder = new Order(link, currentTick, size);
+			orderList.add(newOrder);
+			upstrLinks.get(0).putOrders(orderList);
+		}		
+		else{
+			ReturnOrder rOrder = new ReturnOrder(link, currentTick, size);
+			rOrder.setReturnOrder(true);
+			Shipment returnShipment = new Shipment(link, currentTick, rOrder.getSize(), link.genDuration(), rOrder);
+			rOrder.addShipment(returnShipment);
 			link.induceShipmentUp(returnShipment);
-			newOrder.incrSent(returnShipment.getSize());
+			rOrder.incrSent(returnShipment.getSize());
 		}
 		this.demandData.handDemandData((int)RepastEssentials.GetTickCount(), size);
 	}
@@ -121,10 +148,6 @@ public class Customer extends Node{
 		return string;
 	}
 
-	@Override
-	public DemandData searchCustomerDemandData() {
-		// TODO Auto-generated method stub
-		return null;
-	}
+	
 
 }

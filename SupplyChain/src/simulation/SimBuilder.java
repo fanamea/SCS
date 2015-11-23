@@ -24,6 +24,7 @@ import repast.simphony.space.grid.Grid;
 import repast.simphony.space.grid.GridBuilderParameters;
 import repast.simphony.space.grid.SimpleGridAdder;
 import repast.simphony.space.grid.WrapAroundBorders;
+import setups.BeerGameBaseLine;
 import setups.OneManufacturerConst;
 import setups.OneManufacturerNormal;
 import setups.ReturnsAndBWE_Chatfield;
@@ -32,7 +33,7 @@ import setups.ReturnsAndBWE_Dejonckheere;
 import setups.Setup;
 import setups.ThreeManufacturer_Trust;
 import setups.TwoManufacturersConst;
-import setups.TwoManufacturersNormal;
+import setups.OneFactoryConstant;
 import setups.TwoRetailers;
 import setups.TwoRetailers_InfSh;
 
@@ -67,7 +68,12 @@ public class SimBuilder implements ContextBuilder<Object> {
 
 		Parameters params = RunEnvironment.getInstance().getParameters();
 		
-		Setup setup = new ReturnsAndBWE_Chatfield();
+		Setup setup = new ReturnsAndBWE_Dejonckheere();
+		
+		setup.setSDDemand(params.getDouble("SDDemand"));
+		setup.setMeanLeadTime(params.getDouble("MeanLeadTime"));
+		setup.setSDLeadTime(params.getDouble("SDLeadTime"));
+		setup.setSharing(params.getBoolean("Sharing"));		
 		setup.print();
 		
 		
@@ -100,7 +106,7 @@ public class SimBuilder implements ContextBuilder<Object> {
 		context.add(setup);
 		
 		if (RunEnvironment.getInstance().isBatch()) {
-			RunEnvironment.getInstance().endAt(20);
+			RunEnvironment.getInstance().endAt(5210);
 		}
 
 		return context;

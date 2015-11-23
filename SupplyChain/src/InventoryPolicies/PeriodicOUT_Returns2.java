@@ -14,7 +14,7 @@ public class PeriodicOUT_Returns2 extends InventoryPolicy{
 	public PeriodicOUT_Returns2() {
 		super();
 		this.period = 1;
-		this.periodMA = 15;
+		this.periodMA = 19;
 	}
 
 	@Override
@@ -25,6 +25,7 @@ public class PeriodicOUT_Returns2 extends InventoryPolicy{
 
 	@Override
 	public double getOrder(int currentTick, double inventoryPosition) {
+		biz.invPos = inventoryPosition;
 		if((currentTick-lastOrderDate)==period){
 			this.lastOrderDate = currentTick;
 			double ret = outLevel-inventoryPosition;
@@ -41,12 +42,14 @@ public class PeriodicOUT_Returns2 extends InventoryPolicy{
 		double meanLeadTime = getMeanLeadTime();
 		double sdOrder = getSDDemand(this.periodMA);
 		double sdLeadTime = getSDLeadTime();
-		double x = (period+4)*meanOrder;
+		double x = (meanLeadTime+2)*meanOrder;
 		double z = 0.0;
 		double sx = Math.sqrt((period+meanLeadTime)*Math.pow(sdOrder, 2)+Math.pow(meanOrder, 2)*Math.pow(sdLeadTime, 2));
 		
+		biz.getInformationModule().setMeanDemandPol(meanOrder);
+		
 		this.outLevel = x + z * sx;
-		System.out.println("OUTLevel: " + outLevel + ", meanOrder: " + meanOrder + ", meanLeadTime: " + meanLeadTime + ", sdOrder: " + sdOrder + ", sdLeadTime: " + sdLeadTime + ", x: " + x + ", z: " + z + ", sx: " + sx);
+		//System.out.println("OUTLevel: " + outLevel + ", meanOrder: " + meanOrder + ", meanLeadTime: " + meanLeadTime + ", sdOrder: " + sdOrder + ", sdLeadTime: " + sdLeadTime + ", x: " + x + ", z: " + z + ", sx: " + sx);
 	}
 
 	@Override
